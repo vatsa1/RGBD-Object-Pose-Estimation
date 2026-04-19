@@ -1,7 +1,9 @@
 matplotlib
+numpy
+opencv-python
+pillow
 pybullet
-trimesh
+scipy
 torch
 torchvision
-scipy
-opencv-python
+trimesh

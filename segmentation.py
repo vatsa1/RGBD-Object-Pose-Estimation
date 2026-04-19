@@ -35,7 +35,10 @@ def iou(prediction, target):
             intersection = (mask_pred * mask_target).sum()
             union = (mask_pred + mask_target).sum() - intersection
             class_ious.append(float(intersection) / float(union))
-        batch_ious.append(np.mean(class_ious))
+        if not class_ious:
+            batch_ious.append(0.0)
+        else:
+            batch_ious.append(np.mean(class_ious))
     return batch_ious
 
 
@@ -206,9 +209,9 @@ def main():
     test_dataset = RGBDataset(test_dir, has_gt=False)
 
     # TODO: Prepare Dataloaders. Only shuffle the training set. You can use check_dataloader(your_dataloader) to check your implementation.
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=2, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False)
 
     # TODO: Prepare model
     model = MiniUNet()
@@ -217,7 +220,7 @@ def main():
     # TODO: Define criterion and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=.001, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=3)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=5)
 
     # Train and validate the model
     # TODO: Remember to include the saved learning curve plot in your report

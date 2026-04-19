@@ -53,17 +53,13 @@ def gen_obj_depth(obj_id, depth, mask):
         Generate depth image for a specific object given obj_id.
         Generate depth for all objects when obj_id == -1. You should filter out the depth of the background, where the ID is 0 in the mask. We want to preserve depth only for object 1 to 5 inclusive.
     """
-    # TODO
     if obj_id == -1:
-        obj_mask = (mask > 0) & (mask <= 5)
+        obj_mask = (mask >= 1) & (mask <= 5)
     else:
         obj_mask = (mask == obj_id)
 
-    # Multiply the depth array by the binary mask to preserve depth only for the desired objects
-    obj_depth = depth * obj_mask.astype(float)
-
-    # Set the depth values of the background (ID == 0) to 0
-    obj_depth[mask == 0] = 0
+    obj_depth = depth.copy()
+    obj_depth[~obj_mask] = 0
     
     return obj_depth
 
@@ -84,9 +80,13 @@ def obj_depth2pts(obj_id, depth, mask, camera, view_matrix):
         The imported depth_to_point_cloud(), cam_view2pose() and transform_point3s() can be useful here.
         The view matrices are provided in the /dataset/val/view_matrix or /dataset/test/view_matrix folder.
     """
-    # TODO
-    world_pts = transform_point3s(cam_view2pose(view_matrix), depth_to_point_cloud(
-        camera.intrinsic_matrix, gen_obj_depth(obj_id, depth, mask)))
+    obj_depth = gen_obj_depth(obj_id, depth, mask)
+    camera_pts = depth_to_point_cloud(camera.intrinsic_matrix, obj_depth)
+    if len(camera_pts) == 0:
+        return np.zeros((0, 3))
+    
+    cam_pose = cam_view2pose(view_matrix)
+    world_pts = transform_point3s(cam_pose, camera_pts)
 
     return world_pts
 
@@ -106,16 +106,16 @@ def align_pts(pts_a, pts_b, max_iterations=50, threshold=1e-06):
         Use trimesh.registration.icp() and trimesh.registration.procrustes().
         scale=False and reflection=False should be passed to both icp() and procrustes().
     """
-    # TODO
-    matrix, _ ,_= trimesh.registration.icp(pts_a, pts_b,
-                                         max_iterations=max_iterations,
-                                         threshold=threshold,
-                                         scale=False,
-                                         reflection=False)
+    # Use Procrustes for initial alignment (centroid matching)
+    initial_matrix, _, _ = trimesh.registration.procrustes(pts_a, pts_b, reflection=False, scale=False)
     
-    matrix, _ ,_= trimesh.registration.procrustes(pts_a, pts_b,
-                                                reflection=False,
-                                                scale=False)
+    # Use ICP for final refinement
+    matrix, _, _ = trimesh.registration.icp(pts_a, pts_b, 
+                                           initial=initial_matrix,
+                                           max_iterations=max_iterations, 
+                                           threshold=threshold, 
+                                           reflection=False, 
+                                           scale=False)
     return matrix
 
 
@@ -134,12 +134,14 @@ def estimate_pose(depth, mask, camera, view_matrix):
     Purpose:
         Perform pose estimation on each object in the given image.
     """
-    # TODO
     list_obj_pose = [None for _ in range(len(LIST_OBJ_FOLDERNAME))]
-    for obj_id in range(1, len(LIST_OBJ_FOLDERNAME) + 1):
-            depth_points = obj_depth2pts(obj_id, depth, mask, camera, view_matrix)
-            list_obj_pose[obj_id -
-                      1] = align_pts(obj_mesh2pts(obj_id, len(depth_points)), depth_points)
+    for i, obj_id in enumerate(range(1, len(LIST_OBJ_FOLDERNAME) + 1)):
+        depth_points = obj_depth2pts(obj_id, depth, mask, camera, view_matrix)
+        if len(depth_points) >= 10:  # Need at least a few points to align
+            # Sample mesh points (same number as depth points for Procrustes compatibility)
+            mesh_points = obj_mesh2pts(obj_id, len(depth_points))
+            list_obj_pose[i] = align_pts(mesh_points, depth_points)
+            
     return list_obj_pose
 
 

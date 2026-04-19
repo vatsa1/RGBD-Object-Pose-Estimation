@@ -74,11 +74,11 @@ class RGBDataset(Dataset):
                     rgb_pil = TF.hflip(rgb_pil)
                     gt_pil = TF.hflip(gt_pil)
                 
-                angle = random.uniform(-15, 15)
+                angle = random.uniform(-10, 10)
                 rgb_pil = TF.rotate(rgb_pil, angle, interpolation=TF.InterpolationMode.BILINEAR)
                 gt_pil = TF.rotate(gt_pil, angle, interpolation=TF.InterpolationMode.NEAREST)
                 
-                rgb_pil = transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2)(rgb_pil)
+                rgb_pil = transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05)(rgb_pil)
                 
             sample = {'input': self.transform(rgb_pil), 'target': torch.LongTensor(np.array(gt_pil))}
         else:
