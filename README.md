@@ -11,6 +11,9 @@ flowchart LR
   E --> F[Per-object 4x4 poses]
 ```
 
+### Visualization
+![Object Pose Estimation Results](./assets/visualization.png)
+
 ## What’s inside
 
 | Piece | Role |
@@ -109,11 +112,3 @@ Reports per-object **average closest-point distance** between mesh points transf
 1. **Segmentation:** Encoder–decoder CNN (`MiniUNet`) with cross-entropy loss; mIoU tracked per epoch. Input RGB is normalized using dataset statistics; training uses flips and small rotations.
 2. **Pose:** For each object ID, depth is masked, unprojected to the camera, transformed to the world using the stored **view matrix**, then aligned to **points sampled from the mesh** using Procrustes initialization + **ICP** (`trimesh.registration`).
 
-## Credits
-
-- [**YCB Object and Model Set**](https://www.ycbbenchmarks.com/) — subset of object meshes used for simulation and alignment.
-- Some dataset helpers and evaluation utilities started from a university robotics/vision exercise; the segmentation network and pose pipeline here are the project implementation.
-
-## License
-
-If you publish this repo, add a `LICENSE` and confirm terms for YCB-derived meshes and any code you did not author.
